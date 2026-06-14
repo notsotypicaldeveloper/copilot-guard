@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CopilotGuard — Security for the Agentic Enterprise</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d2e;
+    --surface2: #252842;
+    --border: #2e3155;
+    --blue: #2f81f7;
+    --blue-dim: #1a4a8a;
+    --red: #f85149;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --purple: #a371f7;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --radius: 10px;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, #2f81f7 0%, #a371f7 100%);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .badge {
+    font-size: 10px; font-weight: 600;
+    padding: 2px 8px; border-radius: 20px;
+    background: var(--blue-dim); color: var(--blue);
+    letter-spacing: 0.5px;
+  }
+  .header-right {
+    display: flex; align-items: center; gap: 16px;
+  }
+  .identity-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px; color: var(--text-dim);
+  }
+  .identity-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--yellow); }
+
+  /* ── Risk Score ── */
+  .risk-widget {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .risk-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.8px; }
+  .risk-number {
+    font-size: 28px; font-weight: 800;
+    color: var(--red);
+    transition: color 0.5s, opacity 0.3s;
+    min-width: 48px; text-align: right;
+  }
+  .risk-number.safe { color: var(--green); }
+  .risk-bar-wrap { width: 80px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .risk-bar { height: 100%; border-radius: 3px; background: var(--red); transition: width 0.8s ease, background 0.5s; }
+
+  /* ── Main layout ── */
+  .main {
+    display: grid;
+    grid-template-columns: 300px 1fr 320px;
+    gap: 0;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Panel shared ── */
+  .panel {
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 14px 16px 10px;
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-body { flex: 1; overflow-y: auto; padding: 12px; }
+
+  /* ── File list ── */
+  .file-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px;
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    margin-bottom: 6px;
+    cursor: default;
+    transition: background 0.2s, border-color 0.3s;
+  }
+  .file-item:hover { background: var(--surface2); }
+  .file-item.critical { border-color: rgba(248,81,73,0.4); background: rgba(248,81,73,0.06); }
+  .file-item.warning { border-color: rgba(210,153,34,0.4); background: rgba(210,153,34,0.06); }
+  .file-item.safe-exposed { border-color: rgba(47,129,247,0.3); }
+  .file-icon { font-size: 20px; flex-shrink: 0; line-height: 1.2; }
+  .file-info { flex: 1; min-width: 0; }
+  .file-name {
+    font-size: 12px; font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-bottom: 3px;
+  }
+  .file-meta { font-size: 10px; color: var(--text-dim); }
+  .scope-tag {
+    display: inline-block;
+    font-size: 9px; font-weight: 700;
+    padding: 2px 6px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .scope-everyone { background: rgba(248,81,73,0.2); color: var(--red); }
+  .scope-restricted { background: rgba(63,185,80,0.15); color: var(--green); }
+  .sensitivity-tag {
+    display: inline-block; margin-left: 4px;
+    font-size: 9px; font-weight: 700;
+    padding: 2px 6px; border-radius: 4px;
+    text-transform: uppercase;
+  }
+  .tag-critical { background: rgba(248,81,73,0.25); color: var(--red); }
+  .tag-warning  { background: rgba(210,153,34,0.25); color: var(--yellow); }
+  .tag-safe     { background: rgba(63,185,80,0.15); color: var(--green); }
+
+  /* ── Copilot chat panel ── */
+  .chat-panel { display: flex; flex-direction: column; overflow: hidden; }
+  .chat-header {
+    padding: 14px 20px 10px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .copilot-logo {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: linear-gradient(135deg, #0f6cbd, #3a96dd);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .chat-title { font-size: 14px; font-weight: 600; }
+  .chat-subtitle { font-size: 11px; color: var(--text-dim); }
+
+  .chat-messages {
+    flex: 1; overflow-y: auto;
+    padding: 16px 20px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .msg { max-width: 90%; display: flex; flex-direction: column; gap: 4px; }
+  .msg.user { align-self: flex-end; align-items: flex-end; }
+  .msg.bot  { align-self: flex-start; }
+  .msg-bubble {
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 13px; line-height: 1.5;
+  }
+  .msg.user .msg-bubble {
+    background: var(--blue);
+    color: white;
+    border-bottom-right-radius: 4px;
+  }
+  .msg.bot .msg-bubble {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+  }
+  .msg-bubble.leak { border-color: var(--red); background: rgba(248,81,73,0.08); }
+  .msg-bubble.safe { border-color: var(--green); background: rgba(63,185,80,0.06); }
+  .msg-source { font-size: 10px; color: var(--text-dim); }
+
+  .chat-input-area {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .chat-input-row { display: flex; gap: 8px; }
+  .chat-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-size: 13px; font-family: var(--font);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { border-color: var(--blue); }
+  .btn {
+    padding: 10px 16px;
+    border-radius: 8px; border: none;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: opacity 0.2s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--blue); color: white; }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-danger {
+    background: linear-gradient(135deg, #f85149 0%, #a371f7 100%);
+    color: white; padding: 10px 20px;
+  }
+  .btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 11px;
+  }
+
+  .quick-prompts {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;
+  }
+  .quick-prompt {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 11px; color: var(--text-dim);
+    cursor: pointer; transition: border-color 0.2s, color 0.2s;
+  }
+  .quick-prompt:hover { border-color: var(--blue); color: var(--text); }
+
+  .scan-row {
+    margin-top: 10px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .scan-status { font-size: 11px; color: var(--text-dim); flex: 1; }
+
+  /* ── Agent feed panel ── */
+  .feed-panel { border-right: none; }
+  .agent-event {
+    padding: 10px;
+    border-radius: 8px;
+    border-left: 3px solid var(--border);
+    margin-bottom: 8px;
+    background: var(--surface2);
+    animation: fadeIn 0.3s ease;
+    font-size: 12px;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .agent-event.recon    { border-color: var(--blue); }
+  .agent-event.context  { border-color: var(--yellow); }
+  .agent-event.attack   { border-color: var(--red); }
+  .agent-event.remediation { border-color: var(--green); }
+  .agent-event.orchestrator { border-color: var(--purple); }
+
+  .event-header {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 4px;
+  }
+  .agent-name {
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.6px;
+  }
+  .agent-name.recon       { color: var(--blue); }
+  .agent-name.context     { color: var(--yellow); }
+  .agent-name.attack      { color: var(--red); }
+  .agent-name.remediation { color: var(--green); }
+  .agent-name.orchestrator{ color: var(--purple); }
+
+  .event-status-dot {
+    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  }
+  .dot-start    { background: var(--blue); animation: pulse 1.5s infinite; }
+  .dot-complete { background: var(--green); }
+  .dot-classified { background: var(--yellow); }
+  .dot-proof    { background: var(--red); }
+  .dot-fixed    { background: var(--green); }
+  .dot-done     { background: var(--purple); }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  .event-message { color: var(--text); line-height: 1.4; }
+  .event-detail {
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 6px;
+    font-size: 11px; color: var(--text-dim);
+    font-family: 'Menlo', 'Consolas', monospace;
+    line-height: 1.5;
+    white-space: pre-wrap; word-break: break-word;
+  }
+
+  .empty-feed {
+    text-align: center; padding: 40px 20px;
+    color: var(--text-dim); font-size: 12px;
+  }
+  .empty-feed .big { font-size: 36px; margin-bottom: 10px; }
+
+  /* ── Stats row ── */
+  .stats-row {
+    display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;
+  }
+  .stat-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 11px; color: var(--text-dim);
+  }
+  .stat-chip span { font-weight: 700; color: var(--text); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🛡️</div>
+    CopilotGuard
+    <span class="badge">MICROSOFT BUILD AI 2026</span>
+  </div>
+
+  <div class="header-right">
+    <div class="identity-pill">
+      <div class="identity-dot"></div>
+      Signed in as: <strong style="color:var(--text);margin-left:4px;">intern@contoso.com</strong>
+    </div>
+
+    <div class="risk-widget">
+      <div>
+        <div class="risk-label">Risk Score</div>
+        <div class="risk-bar-wrap" style="margin-top:4px;">
+          <div class="risk-bar" id="riskBar" style="width:80%"></div>
+        </div>
+      </div>
+      <div class="risk-number" id="riskNumber">80</div>
+    </div>
+
+    <button class="btn btn-ghost" onclick="resetDemo()">↺ Reset Demo</button>
+  </div>
+</header>
+
+<!-- ── Main ───────────────────────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- Left: File list -->
+  <div class="panel">
+    <div class="panel-header">
+      SharePoint Files
+      <div id="statsRow" class="stats-row" style="gap:4px;"></div>
+    </div>
+    <div class="panel-body" id="fileList">
+      <div style="text-align:center;padding:30px;color:var(--text-dim);font-size:12px;">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Center: Copilot chat -->
+  <div class="chat-panel">
+    <div class="chat-header">
+      <div class="copilot-logo">✦</div>
+      <div>
+        <div class="chat-title">Microsoft 365 Copilot</div>
+        <div class="chat-subtitle">Contoso Enterprise · intern@contoso.com</div>
+      </div>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+      <div class="msg bot">
+        <div class="msg-bubble">
+          👋 Hi! I'm Microsoft 365 Copilot. I can answer questions using files you have access to across SharePoint, OneDrive, and Teams. What would you like to know?
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <div class="quick-prompts" id="quickPrompts">
+        <span class="quick-prompt" onclick="setQuestion('What does the VP of Sales earn?')">💰 VP of Sales salary?</span>
+        <span class="quick-prompt" onclick="setQuestion('What is Project Phoenix?')">🤫 Project Phoenix?</span>
+        <span class="quick-prompt" onclick="setQuestion('Who is on a performance improvement plan?')">📋 Who is on PIP?</span>
+        <span class="quick-prompt" onclick="setQuestion('What is our marketing budget?')">📣 Marketing budget?</span>
+      </div>
+      <div class="chat-input-row">
+        <input
+          class="chat-input" id="chatInput"
+          placeholder="Ask Copilot anything…"
+          onkeydown="if(event.key==='Enter')sendMessage()"
+        />
+        <button class="btn btn-primary" onclick="sendMessage()">Ask</button>
+      </div>
+      <div class="scan-row">
+        <button class="btn btn-danger" id="scanBtn" onclick="runScan()">
+          🔍 Run CopilotGuard
+        </button>
+        <div class="scan-status" id="scanStatus">
+          Click to scan tenant for Copilot data exposure risks
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Agent activity feed -->
+  <div class="panel feed-panel">
+    <div class="panel-header">
+      Agent Activity Feed
+      <span style="font-size:10px;color:var(--text-dim);font-weight:400;text-transform:none;letter-spacing:0;">
+        Live swarm output
+      </span>
+    </div>
+    <div class="panel-body" id="agentFeed">
+      <div class="empty-feed">
+        <div class="big">🤖</div>
+        Agent swarm is idle.<br>
+        Click <strong>Run CopilotGuard</strong> to start.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let scanning = false;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  await refreshState();
+}
+
+async function refreshState() {
+  const res = await fetch('/api/state');
+  const data = await res.json();
+  renderFiles(data.files, data.stats);
+  updateRisk(data.risk_score);
+}
+
+// ── File list ─────────────────────────────────────────────────────────────────
+const FILE_ICONS = { spreadsheet: '📊', document: '📄', presentation: '📑' };
+
+function renderFiles(files, stats) {
+  const list = document.getElementById('fileList');
+  const statsRow = document.getElementById('statsRow');
+
+  statsRow.innerHTML = `
+    <span class="stat-chip"><span>${stats.total}</span> total</span>
+    <span class="stat-chip" style="border-color:rgba(248,81,73,0.4);color:var(--red)"><span>${stats.exposed}</span> exposed</span>
+    <span class="stat-chip" style="border-color:rgba(63,185,80,0.3);color:var(--green)"><span>${stats.safe}</span> safe</span>
+  `;
+
+  list.innerHTML = files.map(f => {
+    const icon = FILE_ICONS[f.type] || '📁';
+    const scopeTag = f.scope === 'everyone'
+      ? '<span class="scope-tag scope-everyone">⚠ Everyone</span>'
+      : '<span class="scope-tag scope-restricted">✓ Restricted</span>';
+
+    let sensitivityTag = '';
+    if (f.sensitivity) {
+      const cls = f.sensitivity.toLowerCase();
+      sensitivityTag = `<span class="sensitivity-tag tag-${cls}">${f.sensitivity}</span>`;
+    }
+
+    let itemClass = '';
+    if (f.sensitivity === 'CRITICAL') itemClass = 'critical';
+    else if (f.sensitivity === 'WARNING') itemClass = 'warning';
+    else if (f.scope === 'everyone') itemClass = 'safe-exposed';
+
+    return `
+      <div class="file-item ${itemClass}">
+        <div class="file-icon">${icon}</div>
+        <div class="file-info">
+          <div class="file-name" title="${f.name}">${f.name}</div>
+          <div class="file-meta">${f.owner}</div>
+          <div style="margin-top:4px">${scopeTag}${sensitivityTag}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── Risk score ────────────────────────────────────────────────────────────────
+function updateRisk(score) {
+  const num = document.getElementById('riskNumber');
+  const bar = document.getElementById('riskBar');
+  num.textContent = score;
+  bar.style.width = score + '%';
+  if (score <= 20) {
+    num.className = 'risk-number safe';
+    bar.style.background = 'var(--green)';
+  } else if (score <= 50) {
+    num.className = 'risk-number';
+    num.style.color = 'var(--yellow)';
+    bar.style.background = 'var(--yellow)';
+  } else {
+    num.className = 'risk-number';
+    num.style.color = 'var(--red)';
+    bar.style.background = 'var(--red)';
+  }
+}
+
+// ── Copilot chat ──────────────────────────────────────────────────────────────
+function setQuestion(q) {
+  document.getElementById('chatInput').value = q;
+  document.getElementById('chatInput').focus();
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = '';
+
+  addMessage('user', q);
+
+  const typing = addMessage('bot', '✦ Thinking…', 'dim');
+
+  try {
+    const res = await fetch('/api/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: q, identity: 'intern' }),
+    });
+    const data = await res.json();
+
+    typing.remove();
+
+    const isLeak = !data.access_denied && data.sources_used.length > 0;
+    const bubbleClass = data.access_denied ? 'safe' : (isLeak ? 'leak' : '');
+
+    let html = `<div class="msg-bubble ${bubbleClass}">${escapeHtml(data.answer)}</div>`;
+    if (data.sources_used.length > 0) {
+      html += `<div class="msg-source">Sources: ${data.sources_used.join(', ')}</div>`;
+    }
+    if (isLeak) {
+      html += `<div class="msg-source" style="color:var(--red)">⚠ Data exposed via over-shared file</div>`;
+    }
+
+    const msgEl = document.createElement('div');
+    msgEl.className = 'msg bot';
+    msgEl.innerHTML = html;
+    document.getElementById('chatMessages').appendChild(msgEl);
+    scrollChat();
+  } catch (e) {
+    typing.remove();
+    addMessage('bot', '⚠ Could not connect to Copilot. Is the server running?');
+  }
+}
+
+function addMessage(role, text, style) {
+  const messages = document.getElementById('chatMessages');
+  const msg = document.createElement('div');
+  msg.className = `msg ${role}`;
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble' + (style === 'dim' ? '' : '');
+  if (style === 'dim') bubble.style.color = 'var(--text-dim)';
+  bubble.textContent = text;
+  msg.appendChild(bubble);
+  messages.appendChild(msg);
+  scrollChat();
+  return msg;
+}
+
+function scrollChat() {
+  const el = document.getElementById('chatMessages');
+  el.scrollTop = el.scrollHeight;
+}
+
+// ── Agent swarm SSE ───────────────────────────────────────────────────────────
+async function runScan() {
+  if (scanning) return;
+  scanning = true;
+
+  const btn = document.getElementById('scanBtn');
+  const status = document.getElementById('scanStatus');
+  btn.disabled = true;
+  btn.textContent = '⏳ Scanning…';
+  status.textContent = 'Agent swarm initialising…';
+
+  const feed = document.getElementById('agentFeed');
+  feed.innerHTML = '';
+
+  try {
+    const es = new EventSource('/api/scan');
+
+    es.onmessage = (e) => {
+      const event = JSON.parse(e.data);
+      renderAgentEvent(event);
+
+      if (event.agent === 'Orchestrator' && event.status === 'done') {
+        es.close();
+        const score = event.data?.risk_score ?? 5;
+        updateRisk(score);
+        refreshState();
+        scanning = false;
+        btn.disabled = false;
+        btn.textContent = '🔍 Run CopilotGuard';
+        status.textContent = `Scan complete — risk score now ${score}/100`;
+      }
+
+      status.textContent = `[${event.agent}] ${event.message}`;
+    };
+
+    es.onerror = () => {
+      es.close();
+      scanning = false;
+      btn.disabled = false;
+      btn.textContent = '🔍 Run CopilotGuard';
+      status.textContent = '⚠ Scan error — check server and GitHub token';
+      appendFeedError('Connection lost. Is GITHUB_TOKEN set in .env?');
+    };
+  } catch (err) {
+    scanning = false;
+    btn.disabled = false;
+    btn.textContent = '🔍 Run CopilotGuard';
+  }
+}
+
+function renderAgentEvent(event) {
+  const feed = document.getElementById('agentFeed');
+  const agentKey = event.agent.toLowerCase();
+
+  const dotClass = {
+    start: 'dot-start', complete: 'dot-complete',
+    classified: 'dot-classified', proof: 'dot-proof',
+    fixed: 'dot-fixed', done: 'dot-done',
+  }[event.status] || 'dot-start';
+
+  let detailHtml = '';
+  if (event.data) {
+    const d = event.data;
+    if (d.summary) detailHtml += d.summary + '\n';
+    if (d.label)   detailHtml += `Label: ${d.label} — ${d.reason || ''}` + '\n';
+    if (d.leaking_prompt) detailHtml += `Leak query: "${d.leaking_prompt}"` + '\n';
+    if (d.teams_alert) detailHtml += `Teams alert: ${d.teams_alert}`;
+  }
+
+  const el = document.createElement('div');
+  el.className = `agent-event ${agentKey}`;
+  el.innerHTML = `
+    <div class="event-header">
+      <div class="event-status-dot ${dotClass}"></div>
+      <span class="agent-name ${agentKey}">${event.agent}</span>
+    </div>
+    <div class="event-message">${escapeHtml(event.message)}</div>
+    ${detailHtml ? `<div class="event-detail">${escapeHtml(detailHtml.trim())}</div>` : ''}
+  `;
+  feed.appendChild(el);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+function appendFeedError(msg) {
+  const feed = document.getElementById('agentFeed');
+  const el = document.createElement('div');
+  el.className = 'agent-event';
+  el.style.borderColor = 'var(--red)';
+  el.innerHTML = `<div class="event-message" style="color:var(--red)">${escapeHtml(msg)}</div>`;
+  feed.appendChild(el);
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+async function resetDemo() {
+  await fetch('/api/reset', { method: 'POST' });
+  document.getElementById('agentFeed').innerHTML = `
+    <div class="empty-feed">
+      <div class="big">🤖</div>
+      Agent swarm is idle.<br>
+      Click <strong>Run CopilotGuard</strong> to start.
+    </div>`;
+  document.getElementById('chatMessages').innerHTML = `
+    <div class="msg bot">
+      <div class="msg-bubble">
+        👋 Hi! I'm Microsoft 365 Copilot. I can answer questions using files you have access to. What would you like to know?
+      </div>
+    </div>`;
+  document.getElementById('scanStatus').textContent = 'Click to scan tenant for Copilot data exposure risks';
+  await refreshState();
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
