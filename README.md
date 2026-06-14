@@ -90,11 +90,12 @@ The rest of the swarm, the UI, and the demo flow are unchanged.
 
 ## Setup
 
-### 1. Clone and install
+**Requirements:** Python 3.11+
+
+### 1. Install dependencies
 
 ```bash
-cd copilot-guard/backend
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 ```
 
 ### 2. Get a free GitHub Models token (2 minutes)
@@ -105,17 +106,19 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# Edit .env and paste your token as GITHUB_TOKEN=...
 ```
 
-### 3. Run
+4. Open `.env` and replace `your_github_pat_here` with your token
+
+### 3. Run the backend
 
 ```bash
-cd copilot-guard
 uvicorn backend.main:app --reload --port 8000
 ```
 
-Open **http://localhost:8000**
+### 4. Open the frontend
+
+Open `frontend/index.html` in your browser, or visit **http://localhost:8000**
 
 ---
 
