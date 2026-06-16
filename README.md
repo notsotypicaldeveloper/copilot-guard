@@ -6,6 +6,16 @@ Microsoft Build AI 2026 · Theme: **Security in the Agentic Future** + **Agent S
 
 ---
 
+## 🚀 Live Demo
+
+**👉 https://copilot-guard-production.up.railway.app/**
+
+This is the official, live URL for the project — open it in any browser to use the CopilotGuard console (UI + API are served from this single link).
+
+> **Note:** If the link doesn't load on your network, it's a local DNS issue with `*.up.railway.app` (some ISPs refuse it), **not** the app being down. Fix: switch your DNS to `1.1.1.1` / `8.8.8.8`, or open it on mobile data.
+
+---
+
 ## The Problem
 
 Enterprises deploying Microsoft 365 Copilot inherit a decade of accidental oversharing across SharePoint and OneDrive. A salary spreadsheet shared "Everyone" in 2019 was harmless when no one could find it. **Copilot finds it instantly — and answers questions about it to anyone who asks.**
@@ -138,6 +148,8 @@ No code changes needed — `config.py` handles the swap.
 ---
 
 ## Demo Script (3 minutes)
+
+> Run it live at **https://copilot-guard-production.up.railway.app/** (no local setup needed).
 
 1. **Show the leak** — Ask Copilot *"What does the VP of Sales earn?"* → it answers with the real salary from the over-shared file.
 2. **Run CopilotGuard** — Click "Run CopilotGuard". Watch the 4 agents reason live in the activity feed.
